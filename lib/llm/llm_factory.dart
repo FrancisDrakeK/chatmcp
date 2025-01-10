@@ -11,7 +11,12 @@ class LLMFactory {
       {required String apiKey, required String baseUrl}) {
     switch (provider) {
       case LLMProvider.openAI:
-        return OpenAIClient(apiKey: apiKey, baseUrl: baseUrl);
+        return OpenAIClient(
+          apiKey: apiKey,
+          baseUrl: baseUrl,
+          deepseekApiKey: deepseekApiKey, // 新增参数
+          deepseekBaseUrl: deepseekBaseUrl, // 新增参数
+        );
       case LLMProvider.claude:
         return ClaudeClient(apiKey: apiKey, baseUrl: baseUrl);
       default:
