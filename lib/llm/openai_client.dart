@@ -26,15 +26,22 @@ var models = [
 class OpenAIClient extends BaseLLMClient {
   final String apiKey;
   final String baseUrl;
+  final String deepseekApiKey;
+  final String deepseekBaseUrl;
   final Dio _dio;
 
   OpenAIClient({
     required this.apiKey,
     String? baseUrl,
+    required this.deepseekApiKey,
+    String? deepseekBaseUrl,
     Dio? dio,
   })  : baseUrl = (baseUrl == null || baseUrl.isEmpty)
             ? 'https://api.openai.com/v1'
             : baseUrl,
+        deepseekBaseUrl = (deepseekBaseUrl == null || deepseekBaseUrl.isEmpty)
+            ? 'https://api.deepseek.com/v1'
+            : deepseekBaseUrl,
         _dio = dio ??
             Dio(BaseOptions(
               headers: {
@@ -58,8 +65,19 @@ class OpenAIClient extends BaseLLMClient {
     final bodyStr = jsonEncode(body);
 
     try {
+      final String url;
+      final String authorization;
+      if (request.model.startsWith('deepseek')) {
+        url = "$deepseekBaseUrl/chat/completions";
+        authorization = 'Bearer $deepseekApiKey';
+      } else {
+        url = "$baseUrl/chat/completions";
+        authorization = 'Bearer $apiKey';
+      }
+
       final response = await _dio.post(
-        "$baseUrl/chat/completions",
+        url,
+        options: Options(headers: {'Authorization': authorization}),
         data: bodyStr,
       );
 
@@ -93,7 +111,7 @@ class OpenAIClient extends BaseLLMClient {
       );
     } catch (e) {
       final tips =
-          "call openai chatCompletion failed: endpoint: $baseUrl/chat/completions body: $body $e";
+          "call chatCompletion failed: endpoint: $baseUrl/chat/completions body: $body $e";
       throw Exception(tips);
     }
   }
@@ -108,8 +126,19 @@ class OpenAIClient extends BaseLLMClient {
 
     try {
       _dio.options.responseType = ResponseType.stream;
+      final String url;
+      final String authorization;
+      if (request.model.startsWith('deepseek')) {
+        url = "$deepseekBaseUrl/chat/completions";
+        authorization = 'Bearer $deepseekApiKey';
+      } else {
+        url = "$baseUrl/chat/completions";
+        authorization = 'Bearer $apiKey';
+      }
+
       final response = await _dio.post(
-        "$baseUrl/chat/completions",
+        url,
+        options: Options(headers: {'Authorization': authorization}),
         data: jsonEncode(body),
       );
 
@@ -167,7 +196,7 @@ class OpenAIClient extends BaseLLMClient {
       }
     } catch (e) {
       throw Exception(
-          "call openai chatStreamCompletion failed: endpoint: $baseUrl/chat/completions body: $body $e");
+          "call chatStreamCompletion failed: endpoint: $baseUrl/chat/completions body: $body $e");
     }
   }
 
@@ -198,16 +227,20 @@ $conversationText""",
   @override
   Future<List<String>> models() async {
     try {
-      final response = await _dio.get("$baseUrl/models");
+      final openaiResponse = await _dio.get("$baseUrl/models");
+      final deepseekResponse = await _dio.get("$deepseekBaseUrl/models");
 
-      final data = response.data;
-
-      final models = (data['data'] as List)
+      final openaiModels = (openaiResponse.data['data'] as List)
           .map((m) => m['id'].toString())
           .where((id) => id.contains('gpt') || id.contains('o1'))
           .toList();
 
-      return models;
+      final deepseekModels = (deepseekResponse.data['data'] as List)
+          .map((m) => m['id'].toString())
+          .where((id) => id.contains('deepseek'))
+          .toList();
+
+      return [...openaiModels, ...deepseekModels];
     } catch (e, trace) {
       Logger.root.severe('获取模型列表失败: $e, trace: $trace');
       // 返回预定义的模型列表作为后备
