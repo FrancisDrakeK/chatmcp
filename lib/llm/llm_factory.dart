@@ -8,7 +8,7 @@ enum LLMProvider { openAI, claude, llama }
 
 class LLMFactory {
   static BaseLLMClient create(LLMProvider provider,
-      {required String apiKey, required String baseUrl}) {
+      {required String apiKey, required String baseUrl, required String deepseekApiKey, required String deepseekBaseUrl}) {
     switch (provider) {
       case LLMProvider.openAI:
         return OpenAIClient(
@@ -36,6 +36,10 @@ class LLMFactoryHelper {
     final baseUrl =
         ProviderManager.settingsProvider.apiSettings[provider]?.apiEndpoint ??
             '';
+    final deepseekApiKey =
+        ProviderManager.settingsProvider.apiSettings[provider]?.deepseekApiKey ?? '';
+    final deepseekBaseUrl =
+        ProviderManager.settingsProvider.apiSettings[provider]?.deepseekBaseUrl ?? '';
 
     Logger.root.fine(
         'Using API Key: $apiKey for provider: $provider model: $currentModel');
@@ -44,7 +48,9 @@ class LLMFactoryHelper {
     return LLMFactory.create(
         provider == 'openai' ? LLMProvider.openAI : LLMProvider.claude,
         apiKey: apiKey,
-        baseUrl: baseUrl);
+        baseUrl: baseUrl,
+        deepseekApiKey: deepseekApiKey, // 新增参数
+        deepseekBaseUrl: deepseekBaseUrl); // 新增参数
   }
 
   static Future<List<String>> getAvailableModels() async {
